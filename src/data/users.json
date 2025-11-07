@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1,
+    "email": "david1anato@gmail.com",
+    "password": "DavidAnato@1.0",
+    "full_name": "David Anato",
+    "role": "producer",
+    "farm_name": "Ferme Dav",
+    "address": "123 Rue de la Ferme, 75000 Cotonou",
+    "phone": "+33 1 23 45 67 89",
+    "created_at": "2024-01-01T09:00:00Z",
+    "updated_at": "2024-01-01T09:00:00Z"
+  },
+  {
+    "id": 2,
+    "email": "admin@gmail.com",
+    "password": "123456",
+    "full_name": "Admin",
+    "role": "admin",
+    "address": "456 Rue des Admins, 69000 Lyon",
+    "phone": "+33 4 56 78 90 12",
+    "created_at": "2024-01-02T10:30:00Z",
+    "updated_at": "2024-01-02T10:30:00Z"
+  },
+  {
+    "id": 3,
+    "email": "john@gmail.com",
+    "password": "123456",
+    "full_name": "Jonh Doe",
+    "role": "consumer",
+    "address": "321 Avenue des Clients, 31000 Toulouse",
+    "phone": "+33 5 67 89 01 23",
+    "created_at": "2024-01-04T14:20:00Z",
+    "updated_at": "2024-01-04T14:20:00Z"
+  },
+  {
+    "id": 4,
+    "email": "sophie.client@email.com",
+    "password": "password123",
+    "full_name": "Sophie Bernard",
+    "role": "consumer",
+    "address": "321 Avenue des Clients, 31000 Toulouse",
+    "phone": "+33 5 67 89 01 23",
+    "created_at": "2024-01-04T14:20:00Z",
+    "updated_at": "2024-01-04T14:20:00Z"
+  },
+  {
+    "id": 5,
+    "email": "lucas.acheteur@email.com",
+    "password": "password123",
+    "full_name": "Lucas Petit",
+    "role": "consumer",
+    "address": "654 Boulevard des Achats, 33000 Bordeaux",
+    "phone": "+33 5 43 21 09 87",
+    "created_at": "2024-01-05T16:45:00Z",
+    "updated_at": "2024-01-05T16:45:00Z"
+  }
+]
