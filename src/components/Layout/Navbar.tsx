@@ -74,8 +74,8 @@ export default function Navbar() {
             )}
             {user && role === 'consumer' && (
               <>
-                <Link to="/consumer/orders" className={`flex items-center space-x-1 transition nav-link ${isActive('/consumer/orders') ? 'text-green-600 font-bold' : 'text-gray-700 hover:text-green-600'}`}>
-                  <span>Mes Commandes</span>
+                <Link to="/consumer/dashboard" className={`flex items-center space-x-1 transition nav-link ${isActive('/consumer/orders') ? 'text-green-600 font-bold' : 'text-gray-700 hover:text-green-600'}`}>
+                  <span>Mon Espace</span>
                 </Link>
               </>
             )}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { apiService, apiFormDataRequest } from '../../services/api';
+import { Category } from '../../types';
 
 export default function ProductForm() {
   const { id } = useParams();
@@ -11,7 +12,7 @@ export default function ProductForm() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: 'Légumes',
+    category: '',
     price: '',
     unit: 'kg',
     quantity_available: '',
@@ -26,34 +27,56 @@ export default function ProductForm() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const categories = [
-    'Légumes',
-    'Fruits',
-    'Céréales',
-    'Tubercules',
-    'Viandes',
-    'Produits laitiers',
-    'Autres',
-  ];
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const units = ['kg', 'g', 'litre', 'pièce', 'sac', 'botte'];
 
   useEffect(() => {
-    if (isEdit) {
-      loadProduct();
-    }
+    // Charger les catégories avant de charger un produit (édition)
+    const init = async () => {
+      await loadCategories();
+      if (isEdit) {
+        await loadProduct();
+      }
+    };
+    init();
   }, [id]);
+
+  const loadCategories = async () => {
+    try {
+      const cats = await apiService.getCategories();
+      const normalized = Array.isArray(cats)
+        ? cats.map((c: any) => ({ id: Number(c.id), name: String(c.name) }))
+        : [];
+      setCategories(normalized);
+      // Définir une catégorie par défaut si création
+      setFormData((prev) => ({
+        ...prev,
+        category: prev.category || (normalized[0] ? String(normalized[0].id) : ''),
+      }));
+    } catch (e) {
+      console.error('Error loading categories:', e);
+    }
+  };
 
   const loadProduct = async () => {
     try {
       const product = await apiService.getProduct(parseInt(id!));
       
       if (product) {
+        // Résoudre la catégorie vers un ID
+        let categoryId = '';
+        if (typeof product.category === 'object' && product.category?.id) {
+          categoryId = String(product.category.id);
+        } else if (product.category && categories.length > 0) {
+          const found = categories.find((c) => c.name === String(product.category));
+          if (found) categoryId = String(found.id);
+        }
+
         setFormData({
           name: product.name,
           description: product.short_description || product.long_description || product.description || '',
-          category: product.category || 'Autres',
+          category: categoryId || '',
           price: String(product.unit_price ?? product.price ?? ''),
           unit: product.unit_type ?? product.unit ?? 'unité',
           quantity_available: String(product.quantity_available ?? product.availableQuantity ?? ''),
@@ -85,6 +108,7 @@ export default function ProductForm() {
       const fd = new FormData();
       fd.append('name', formData.name);
       fd.append('short_description', formData.description);
+      // Soumettre l'ID de la catégorie
       fd.append('category', formData.category);
       fd.append('unit_price', String(parseFloat(formData.price || '0')));
       fd.append('unit_type', formData.unit);
@@ -229,11 +253,15 @@ export default function ProductForm() {
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
               >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
+                {categories.length === 0 ? (
+                  <option value="">Chargement...</option>
+                ) : (
+                  categories.map((cat) => (
+                    <option key={cat.id} value={String(cat.id)}>
+                      {cat.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 

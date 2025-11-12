@@ -1,8 +1,15 @@
+export interface Category {
+  id: number;
+  name: string;
+  created_at?: string;
+  product_count?: number;
+}
+
 export interface Product {
   id: number;
   name: string;
   description: string;
-  category: string;
+  category: Category | any;
   price: number;
   unit: string;
   quantity_available: number;

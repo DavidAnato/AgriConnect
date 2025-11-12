@@ -37,8 +37,12 @@ export default function ProducerDashboard() {
           setLoading(false);
           return;
         }
-        const products = await apiService.getProducerProducts(user.id);
-
+        // getProducerProducts now returns a paginated object { results, count }
+        const productsData = await apiService.getProducerProducts(user.id, true, 1, 1000);
+        const products = Array.isArray(productsData?.results)
+          ? (productsData.results as any[])
+          : (Array.isArray(productsData) ? (productsData as any[]) : []);
+        const totalProducts = Number(productsData?.count ?? products.length);
         const activeProducts = products.filter((p: any) => Number(p.availableQuantity ?? p.quantity_available ?? 0) > 0).length;
 
         // Fetch vendor stats for the selected period
@@ -46,7 +50,7 @@ export default function ProducerDashboard() {
         const totals = vendorStats?.totals || {};
 
         setStats({
-          totalProducts: products.length,
+          totalProducts,
           activeProducts,
           totalOrders: Number(totals.orders || 0),
           revenue: Number(totals.revenue || 0),
@@ -133,50 +137,64 @@ export default function ProducerDashboard() {
           </Link>
         </div>
 
-        {/* Aperçu boutique */}
+        {/* Sections basées sur les données API */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+          {/* Boutique (données produits) */}
           <div className="bg-white rounded-lg shadow-md p-6 lg:col-span-1">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Aperçu boutique</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Boutique</h2>
             <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-700">Produits total</span>
+                <span className="text-gray-900 font-medium">{loading ? '—' : stats.totalProducts}</span>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-700">Produits actifs</span>
                 <span className="text-gray-900 font-medium">{loading ? '—' : stats.activeProducts}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-700">Articles vendus (période)</span>
-                <span className="text-gray-900 font-medium">{loading ? '—' : stats.itemsSold}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-gray-700">Par statut</span>
-                <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
-                  {Object.entries(stats.byStatus || {}).map(([k, v]) => (
-                    <div key={k} className="flex items-center justify-between">
-                      <span className="capitalize">{k}</span>
-                      <span className="font-medium">{v}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Tâches à faire */}
+          {/* Statistiques de la période (vendor-stats) */}
           <div className="bg-white rounded-lg shadow-md p-6 lg:col-span-2">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Tâches à faire</h2>
-            <ul className="space-y-3">
-              {[
-                'Mettre à jour les stocks des tomates',
-                'Ajouter un nouveau produit (miel)',
-                'Confirmer la commande #12345',
-                'Répondre au message d’un client',
-              ].map((task, idx) => (
-                <li key={idx} className="flex items-start">
-                  <span className="mt-1 mr-2 h-2 w-2 rounded-full bg-green-500"></span>
-                  <span className="text-gray-700">{task}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xl font-bold text-gray-900">Statistiques de la période</h2>
+              <span className="text-sm text-gray-600">{loading ? '' : `du ${stats.period.start} au ${stats.period.end}`}</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-gray-600">Commandes</p>
+                <p className="text-2xl font-bold text-gray-900">{loading ? '—' : stats.totalOrders}</p>
+              </div>
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-gray-600">Articles vendus</p>
+                <p className="text-2xl font-bold text-gray-900">{loading ? '—' : stats.itemsSold}</p>
+              </div>
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-gray-600">Revenu</p>
+                <p className="text-2xl font-bold text-gray-900">{loading ? '—' : `${stats.revenue.toLocaleString()} FCFA`}</p>
+              </div>
+            </div>
           </div>
+        </div>
+
+        {/* Statuts des commandes (vendor-stats.by_status) */}
+        <div className="bg-white rounded-lg shadow-md p-6 mt-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Statuts des commandes</h2>
+          {loading ? (
+            <p className="text-gray-600">Chargement…</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {Object.entries(stats.byStatus || {}).map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 border border-gray-200">
+                  <span className="capitalize text-gray-700">{k}</span>
+                  <span className="text-gray-900 font-semibold">{v}</span>
+                </div>
+              ))}
+              {Object.keys(stats.byStatus || {}).length === 0 && (
+                <p className="text-gray-600">Aucun statut disponible sur la période.</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Top produits sur la période */}
@@ -210,36 +228,7 @@ export default function ProducerDashboard() {
           )}
         </div>
 
-        {/* Inventaire faible */}
-        <div className="bg-white rounded-lg shadow-md p-6 mt-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Inventaire faible</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Produit</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Stock</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {[
-                  { name: 'Tomates', stock: 5 },
-                  { name: 'Lait frais', stock: 3 },
-                  { name: 'Œufs', stock: 8 },
-                ].map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="px-4 py-2 text-gray-900">{item.name}</td>
-                    <td className="px-4 py-2 text-gray-700">{item.stock}</td>
-                    <td className="px-4 py-2">
-                      <button className="bg-green-600 text-white px-3 py-1 rounded-md text-sm hover:bg-green-700 transition-colors">Mettre à jour</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Sections purement API conservées ci-dessus; contenu statique supprimé */}
       </div>
   );
 }

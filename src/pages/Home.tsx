@@ -1,11 +1,52 @@
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Leaf, Users, TrendingUp, Package, Store, MapPin, Phone, Star, Truck, Shield, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ShoppingBag, Leaf, Users, TrendingUp, Package, Store, MapPin, Phone, Truck, Shield, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { apiService } from '../services/api';
+import { Category } from '../types';
 
 export default function Home() {
   const { user } = useAuth();
   const role = user?.role;
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || '';
+  const [topCategories, setTopCategories] = useState<Category[]>([]);
+
+  // Compteur animé simple
+  function CountUp({ end, duration = 800 }: { end: number; duration?: number }) {
+    const [value, setValue] = useState(0);
+    useEffect(() => {
+      const start = Date.now();
+      const tick = () => {
+        const progress = Math.min(1, (Date.now() - start) / duration);
+        setValue(Math.round(progress * (end || 0)));
+        if (progress < 1) requestAnimationFrame(tick);
+      };
+      tick();
+    }, [end, duration]);
+    return <span>{value}</span>;
+  }
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const cats = await apiService.getCategories();
+        const normalized: Category[] = Array.isArray(cats)
+          ? cats.map((c: any) => ({
+              id: Number(c.id),
+              name: String(c.name),
+              created_at: c.created_at,
+              product_count: Number(c.product_count ?? 0),
+            }))
+          : [];
+        const top6 = normalized
+          .sort((a, b) => (b.product_count ?? 0) - (a.product_count ?? 0))
+          .slice(0, 6);
+        setTopCategories(top6);
+      } catch (e) {
+        console.error('Error loading categories:', e);
+      }
+    })();
+  }, []);
   return (
     <>
       {/* Hero Section - Personnalisée selon le type d'utilisateur */}
@@ -129,32 +170,86 @@ export default function Home() {
       </section>
 
 
-      {/* Catégories populaires */}
-      <section className="py-16 bg-gray-100">
+      {/* Catégories populaires – version stylée */}
+      <section className="py-20 bg-gradient-to-br from-green-50 via-white to-green-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Catégories populaires</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {[
-              { name: 'Fruits', icon: Leaf },
-              { name: 'Légumes', icon: Package },
-              { name: 'Produits laitiers', icon: Store },
-              { name: 'Viandes', icon: ShoppingBag },
-              { name: 'Céréales', icon: TrendingUp },
-              { name: 'Boissons locales', icon: Users },
-            ].map((cat, idx) => (
-              <Link
-                key={idx}
-                to="/catalog"
-                className="group bg-gray-50 rounded-xl p-4 text-center hover:shadow-lg transition"
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
+              Explorer par <span className="text-green-600">catégories</span>
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Les produits les plus recherchés, regroupés pour vous.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
+            {topCategories.length === 0
+              ? // Skeleton load
+                Array.from({ length: 6 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="relative overflow-hidden rounded-2xl bg-white shadow-sm animate-pulse"
+                  >
+                    <div className="h-32 bg-gray-200" />
+                    <div className="p-4">
+                      <div className="h-5 bg-gray-300 rounded mb-2" />
+                      <div className="h-4 bg-gray-200 rounded w-16" />
+                    </div>
+                  </div>
+                ))
+              : // Cartes réelles
+                topCategories.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    to={`/catalog?category_name=${encodeURIComponent(cat.name)}`}
+                    className="group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+                  >
+                    {/* Background dégradé subtil */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-green-200 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="relative bg-white p-6 h-full flex flex-col justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-green-700 transition-colors">
+                          {cat.name}
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          <CountUp end={cat.product_count || 0} /> produits
+              y          </p>
+                      </div>
+                      {/* Petit badge animé */}
+                      <div className="mt-4 flex items-center gap-2">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Populaire
+                        </span>
+                        <span className="text-green-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                          →
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+          </div>
+
+          {/* Bouton “Voir toutes les catégories” */}
+          <div className="text-center mt-12">
+            <Link
+              to="/catalog"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-green-600 text-white font-semibold shadow hover:bg-green-700 transition"
+            >
+              Toutes les catégories
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <div className="bg-green-100 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
-                  {cat.icon && (
-                    <cat.icon className="h-7 w-7 text-green-600" />
-                  )}
-                </div>
-                <p className="font-semibold text-gray-800 group-hover:text-green-700">{cat.name}</p>
-              </Link>
-            ))}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 8l4 4m0 0l-4 4m4-4H3"
+                />
+              </svg>
+            </Link>
           </div>
         </div>
       </section>

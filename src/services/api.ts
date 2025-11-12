@@ -223,17 +223,34 @@ export const apiService = {
     location_commune?: string;
     location_village?: string;
     producer?: number | string;
+    category?: number | string;
+    category_name?: string | undefined;
     search?: string;
     ordering?: string; // e.g. '-created_at'
-  }): Promise<any[]> {
-    const query = this.buildQuery(params || {});
+    page?: number;
+    page_size?: number; // default 6 if not provided
+  }): Promise<any> {
+    const query = this.buildQuery({
+      ...(params || {}),
+      page_size: (params?.page_size ?? 6),
+      page: params?.page
+    });
     const res = await apiRequest({ url: `/products/products/${query}`, method: 'GET' });
     return res.json();
   },
 
   // 2) Products for a specific producer
-  async getProducerProducts(producerId: number | string, include_unpublished?: boolean): Promise<any[]> {
-    const query = this.buildQuery({ include_unpublished });
+  async getProducerProducts(
+    producerId: number | string,
+    include_unpublished?: boolean,
+    page?: number,
+    page_size?: number
+  ): Promise<any> {
+    const query = this.buildQuery({
+      include_unpublished,
+      page,
+      page_size: page_size ?? 10
+    });
     const res = await apiRequest({ url: `/products/products/producer/${producerId}/${query}`, method: 'GET' });
     return res.json();
   },
@@ -336,6 +353,12 @@ export const apiService = {
   async getVendorStats(params?: { start?: string; end?: string }, navigate?: (path: string) => void): Promise<any> {
     const query = apiService.buildQuery(params || {});
     const res = await apiRequest({ url: `/commerce/orders/vendor-stats/${query}`, method: 'GET', navigate });
+    return res.json();
+  }
+  ,
+  // 8) Categories listing
+  async getCategories(): Promise<any[]> {
+    const res = await apiRequest({ url: '/products/categories/', method: 'GET' });
     return res.json();
   }
 };

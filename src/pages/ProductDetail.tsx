@@ -182,7 +182,7 @@ export default function ProductDetail() {
               <div className="space-y-6">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-                  <p className="text-gray-600 mb-4">{product.category}</p>
+                  <p className="text-gray-600 mb-4">{typeof product.category === 'object' ? product.category.name : product.category}</p>
                   
                   {/* Note moyenne */}
                   {product.reviews && product.reviews.length > 0 && (
@@ -425,10 +425,10 @@ export default function ProductDetail() {
                   <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600">Découvrez d'autres produits de la même catégorie</p>
                   <Link 
-                    to={`/catalog?category=${product.category}`}
+                    to={`/catalog${typeof product.category === 'object' ? `?category=${product.category.id}` : ''}`}
                     className="inline-block mt-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
                   >
-                    Voir la catégorie {product.category}
+                    Voir la catégorie {typeof product.category === 'object' ? product.category.name : product.category}
                   </Link>
                 </div>
               </div>

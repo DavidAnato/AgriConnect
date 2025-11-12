@@ -54,7 +54,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="flex items-start justify-between mb-2">
           <h3 className="text-lg font-semibold text-gray-900 flex-1">{product.name}</h3>
           <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-            {product.category}
+            {typeof product.category === 'object' ? product.category.name : product.category}
           </span>
         </div>
 
@@ -78,17 +78,17 @@ export default function ProductCard({ product }: ProductCardProps) {
         )}
 
         {/* Prix et bouton */}
-        <div className="flex items-center justify-between">
-          <div>
+          <div className='mb-2'>
             <span className="text-lg font-bold text-green-600">
               {product.price.toLocaleString()} FCFA
             </span>
             <span className="text-sm text-gray-600">/{product.unit}</span>
           </div>
+        <div className="flex items-center justify-between">
 
           <div className="flex items-center gap-2">
             <button className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition">
-              Voir le produit
+              Voir
             </button>
             {isConsumer && product.status !== 'sold_out' && (
               <button
