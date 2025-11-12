@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Star, Calendar, Truck, Shield, Clock, Award, Package, User, Phone, Mail, MapPin, Store } from 'lucide-react';
+import { ShoppingCart, Star, Calendar, Truck, Shield, Award, Package, User, Phone, Mail, MapPin, Store } from 'lucide-react';
 import { apiService } from '../services/api';
-import { useCart } from '../contexts/CartContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { addToCart } = useCart();
-  const [product, setProduct] = useState(null);
+  // Backend product shape (any) to avoid TS conflicts with UI-only fields
+  const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -21,7 +22,7 @@ export default function ProductDetail() {
 
   const fetchProduct = async () => {
     try {
-      const productId = parseInt(id);
+      const productId = parseInt(id ?? '', 10);
       if (isNaN(productId)) {
         console.error('ID de produit invalide:', id);
         setProduct(null);
@@ -44,13 +45,13 @@ export default function ProductDetail() {
 
     try {
       // Vérifier le stock disponible
-      const availableQuantity = (product?.quantity_available ?? product?.stock ?? 0);
+      const availableQuantity = Number(product?.quantity_available ?? product?.stock ?? 0);
       if (quantity > availableQuantity) {
-        alert(`Désolé, seulement ${availableQuantity} ${product.unit} disponibles.`);
+        alert(`Désolé, seulement ${availableQuantity} ${product.unit_type || 'unité'} disponibles.`);
         return;
       }
 
-      await addToCart(product, quantity);
+      await addToCart({ id: Number(product.id) }, quantity);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
       
@@ -103,16 +104,21 @@ export default function ProductDetail() {
   }
 
   // Calculer la note moyenne
-  const averageRating = product.reviews && product.reviews.length > 0
-    ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
+  const averageRating = product?.reviews && product.reviews.length > 0
+    ? product.reviews.reduce((sum:any, review:any) => sum + review.rating, 0) / product.reviews.length
     : 0;
 
   // Vérifier si le produit est nouveau (moins de 7 jours)
-  const isNew = new Date() - new Date(product.created_at) < 7 * 24 * 60 * 60 * 1000;
+  const isNew = product?.created_at
+    ? (new Date().getTime() - new Date(product.created_at).getTime() < 7 * 24 * 60 * 60 * 1000)
+    : false;
   
   // Disponibilité calculée à partir de quantity_available ou stock
-  const availableQuantity = (product?.quantity_available ?? product?.stock ?? 0);
+  const availableQuantity = Number(product?.quantity_available ?? product?.stock ?? 0);
   const isAvailable = availableQuantity > 0;
+
+  // Safely format price
+  const safePrice = Number(product.unit_price ?? product.price ?? 0);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -135,9 +141,9 @@ export default function ProductDetail() {
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
               <div className="relative h-96 bg-gray-200 rounded-lg overflow-hidden">
-                {product.image_url ? (
+                {product.image ? (
                   <img
-                    src={product.image_url}
+                    src={product.image}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
@@ -200,18 +206,19 @@ export default function ProductDetail() {
                   )}
                   
                   <div className="text-3xl font-bold text-green-600 mb-2">
-                    {product.price.toLocaleString()} FCFA
-                    {product.unit && <span className="text-lg text-gray-600"> / {product.unit}</span>}
+                    {safePrice.toLocaleString()} FCFA
+                    {product.unit_type && <span className="text-lg text-gray-600"> / {product.unit_type}</span>}
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <p className="text-gray-700">{product.description}</p>
+                  {/* Affiche la description courte */}
+                  <p className="text-gray-700">{product.short_description || product.description}</p>
                   
                   <div className="grid grid-cols-1 gap-4">
                     <div className="flex items-center text-gray-600">
                       <MapPin className="h-5 w-5 mr-2" />
-                      <span>{product.location}</span>
+                      <span>{product.location_village || product.location_commune || product.location}</span>
                     </div>
                     
                     <div className="flex items-center text-gray-600">
@@ -235,11 +242,11 @@ export default function ProductDetail() {
                   </div>
                 </div>
 
-                {profile?.role === 'consumer' && isAvailable && (
+                {user?.role === 'consumer' && isAvailable && (
                    <div className="space-y-4">
                      <div>
                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                         Quantité ({product.unit})
+                         Quantité ({product.unit_type || 'unité'})
                        </label>
                        <div className="flex items-center space-x-3">
                          <button
@@ -274,13 +281,13 @@ export default function ProductDetail() {
                      </button>
 
                      <p className="text-center text-gray-600 text-sm">
-                       Total : <span className="font-semibold">{(product.price * quantity).toLocaleString()} FCFA</span>
+                       Total : <span className="font-semibold">{(safePrice * quantity).toLocaleString()} FCFA</span>
                      </p>
                      
                     {availableQuantity <= 5 && (
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                         <p className="text-yellow-700 text-sm font-medium">
-                          ⚠️ Plus que {availableQuantity} {product.unit} disponibles !
+                          ⚠️ Plus que {availableQuantity} {product.unit_type} disponibles !
                         </p>
                       </div>
                     )}
@@ -298,7 +305,17 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {product.producer && (
+            {/* Section Description longue */}
+            {product.long_description && (
+              <div className="border-t border-gray-200 p-8 bg-gray-50">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Description détaillée</h2>
+                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                  <p className="text-gray-700 whitespace-pre-line">{product.long_description}</p>
+                </div>
+              </div>
+            )}
+
+            {product?.producer && (
               <div className="border-t border-gray-200 p-8 bg-gray-50">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
                   <Store className="h-6 w-6 mr-2 text-green-600" />
@@ -310,8 +327,8 @@ export default function ProductDetail() {
                       <User className="h-6 w-6 text-green-600" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{product.producer.full_name}</p>
-                      <p className="text-gray-600 text-sm">{product.producer.location || product.location}</p>
+                      <p className="font-medium text-gray-900">{[product.producer.first_name, product.producer.last_name].filter(Boolean).join(' ') || product.producer.email}</p>
+                      <p className="text-gray-600 text-sm">{product.producer.farm_address || product.location_commune || product.location_village || ''}</p>
                       {product.producer.address && (
                         <p className="text-gray-500 text-xs">{product.producer.address}</p>
                       )}
@@ -339,10 +356,10 @@ export default function ProductDetail() {
                       </a>
                     </div>
                     
-                    {product.producer.location && (
+                    {product.producer.farm_address && (
                       <div className="flex items-center text-gray-600 text-sm">
                         <MapPin className="h-4 w-4 mr-2" />
-                        <span>{product.producer.location}</span>
+                        <span>{product.producer.farm_address}</span>
                       </div>
                     )}
                   </div>
@@ -368,7 +385,7 @@ export default function ProductDetail() {
                   Avis clients ({product.reviews.length})
                 </h2>
                 <div className="space-y-4">
-                  {product.reviews.map((review, index) => (
+                  {product.reviews.map((review:any, index:any) => (
                     <div key={index} className="bg-white p-6 rounded-lg shadow-sm border">
                       <div className="flex items-center mb-3">
                         <div className="bg-gray-100 p-2 rounded-full mr-3">

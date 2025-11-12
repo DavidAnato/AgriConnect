@@ -1,13 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertCircle, CheckCircle } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { apiService } from '../../services/api';
+import { apiService, apiFormDataRequest } from '../../services/api';
 
 export default function ProductForm() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { profile } = useAuth();
   const isEdit = Boolean(id);
 
   const [formData, setFormData] = useState({
@@ -25,6 +23,9 @@ export default function ProductForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const categories = [
     'Légumes',
@@ -51,15 +52,22 @@ export default function ProductForm() {
       if (product) {
         setFormData({
           name: product.name,
-          description: product.description,
-          category: product.category,
-          price: product.price.toString(),
-          unit: product.unit,
-          quantity_available: product.availableQuantity.toString(),
-          location: product.location,
-          image_url: product.imageUrl || '',
-          status: product.availableQuantity > 0 ? 'available' : 'sold_out',
+          description: product.short_description || product.long_description || product.description || '',
+          category: product.category || 'Autres',
+          price: String(product.unit_price ?? product.price ?? ''),
+          unit: product.unit_type ?? product.unit ?? 'unité',
+          quantity_available: String(product.quantity_available ?? product.availableQuantity ?? ''),
+          location: product.location_village || product.location_commune || product.location || '',
+          image_url: product.image || product.image_url || '',
+          status: (Number(product.quantity_available ?? product.availableQuantity ?? 0) > 0) ? 'available' : 'sold_out',
         });
+
+        // Prévisualisation si une image existe
+        if (product.image || product.image_url) {
+          setImagePreview(product.image || product.image_url);
+        } else {
+          setImagePreview('');
+        }
       }
     } catch (error) {
       console.error('Error loading product:', error);
@@ -73,22 +81,39 @@ export default function ProductForm() {
     setLoading(true);
 
     try {
-      const productData = {
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        price: parseFloat(formData.price),
-        unit: formData.unit,
-        availableQuantity: parseFloat(formData.quantity_available),
-        location: formData.location,
-        imageUrl: formData.image_url || '',
-        producerId: profile?.id!,
-      };
+      // Construire FormData pour correspondre au serializer (et upload image)
+      const fd = new FormData();
+      fd.append('name', formData.name);
+      fd.append('short_description', formData.description);
+      fd.append('category', formData.category);
+      fd.append('unit_price', String(parseFloat(formData.price || '0')));
+      fd.append('unit_type', formData.unit);
+      fd.append('quantity_available', String(parseFloat(formData.quantity_available || '0')));
+      if (formData.location) {
+        fd.append('location_village', formData.location);
+      }
+      if (imageFile) {
+        fd.append('image', imageFile);
+      }
 
-      if (isEdit) {
-        await apiService.updateProduct(parseInt(id!), productData);
-      } else {
-        await apiService.createProduct(productData);
+      const res = isEdit
+        ? await apiFormDataRequest({ url: `/products/products/${id}/`, method: 'PATCH', data: fd })
+        : await apiFormDataRequest({ url: '/products/products/', method: 'POST', data: fd });
+
+      if (!res.ok) {
+        let msg = 'Erreur de validation.';
+        try {
+          const data = await res.json();
+          // Extraire premier message d’erreur
+          const firstKey = Object.keys(data)[0];
+          const firstErr = Array.isArray(data[firstKey]) ? data[firstKey][0] : String(data[firstKey]);
+          msg = `${firstKey}: ${firstErr}`;
+        } catch (_) {
+          const text = await res.text();
+          if (text) msg = text;
+        }
+        setError(msg);
+        return;
       }
 
       setSuccess(true);
@@ -99,6 +124,42 @@ export default function ProductForm() {
       setError('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onFileSelected = (file?: File) => {
+    if (!file) return;
+    setImageFile(file);
+    const url = URL.createObjectURL(file);
+    setImagePreview(url);
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    onFileSelected(f);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    onFileSelected(f);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file') {
+        const f = item.getAsFile();
+        if (f) {
+          onFileSelected(f);
+          break;
+        }
+      }
     }
   };
 
@@ -245,17 +306,38 @@ export default function ProductForm() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              URL de l'image
+              Image du produit
             </label>
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onPaste={handlePaste}
+              className="w-full px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:border-green-600"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {imagePreview ? (
+                <div className="flex items-center justify-center">
+                  <img src={imagePreview} alt="Prévisualisation" className="max-h-40 rounded-lg object-cover" />
+                </div>
+              ) : (
+                <div className="text-gray-600">
+                  Glissez-déposez une image, collez depuis le presse‑papiers,
+                  ou cliquez pour sélectionner un fichier.
+                </div>
+              )}
+            </div>
             <input
-              type="url"
-              value={formData.image_url}
-              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-              placeholder="https://exemple.com/image.jpg"
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileInputChange}
             />
+            {formData.image_url && !imagePreview && (
+              <p className="text-sm text-gray-500 mt-2">Image actuelle: {formData.image_url}</p>
+            )}
             <p className="text-sm text-gray-500 mt-1">
-              Utilisez un lien Pexels ou uploadez votre image
+              Drag & drop, copier-coller d’une image, ou sélectionner un fichier.
             </p>
           </div>
 

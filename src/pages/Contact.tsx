@@ -126,8 +126,6 @@ export default function Contact() {
                     <h3 className="font-semibold text-gray-900 mb-1">Adresse</h3>
                     <p className="text-gray-600">
                       AgriConnect Bénin<br />
-                      Maria Gleta<br />
-                      Abomey-Calavi, Bénin
                     </p>
                   </div>
                 </div>
@@ -140,7 +138,7 @@ export default function Contact() {
                     <h3 className="font-semibold text-gray-900 mb-1">Téléphone</h3>
                     <p className="text-gray-600">
                       <a href="tel:+2250707070707" className="hover:text-green-600">
-                        +225 07 07 07 07 07
+                        +229 01 66 60 58 19
                       </a>
                       <br />
                       <span className="text-sm">Lun-Ven: 8h-18h, Sam: 8h-12h</span>

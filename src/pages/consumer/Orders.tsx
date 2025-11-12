@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Package, CheckCircle } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { Order } from '../../types';
 import { apiService } from '../../services/api';
 
 export default function ConsumerOrders() {
-  const { profile } = useAuth();
   const [searchParams] = useSearchParams();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const showSuccess = searchParams.get('success') === 'true';
 
@@ -18,8 +15,14 @@ export default function ConsumerOrders() {
 
   const loadOrders = async () => {
     try {
-      const userOrders = await apiService.getOrdersByUser(profile?.id || '');
-      setOrders(userOrders);
+      const userOrders = await apiService.getCommerceOrders();
+      // Tri par created_at desc si disponible
+      const sorted = [...(userOrders || [])].sort((a: any, b: any) => {
+        const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return db - da;
+      });
+      setOrders(sorted);
     } catch (error) {
       console.error('Error loading orders:', error);
     } finally {
@@ -99,52 +102,49 @@ export default function ConsumerOrders() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg overflow-hidden">
-                      {order.product?.image_url ? (
-                        <img
-                          src={order.product.image_url}
-                          alt={order.product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="h-8 w-8 text-gray-400" />
-                        </div>
-                      )}
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="h-8 w-8 text-gray-400" />
+                      </div>
                     </div>
 
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                        {order.product?.name}
+                        Commande #{order.id} • Producteur: {order.producer}
                       </h3>
                       <p className="text-sm text-gray-600 mb-2">
-                        {order.items.reduce((sum, item) => sum + item.quantity, 0)} articles
+                        {order.items?.reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0)} article(s)
                       </p>
-                      <p className="text-xs text-gray-500">
-                        Commandé le {new Date(order.created_at).toLocaleDateString('fr-FR', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })}
-                      </p>
+                      {order.created_at && (
+                        <p className="text-xs text-gray-500">
+                          Commandé le {new Date(order.created_at).toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   <div className="text-right">
                     {getStatusBadge(order.status)}
                     <p className="text-xl font-bold text-green-600 mt-2">
-                      {order.total.toLocaleString()} FCFA
+                      {Number(order.total).toLocaleString()} FCFA
                     </p>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="border-t border-gray-200 pt-4 mt-4 flex items-center justify-between">
                   <p className="text-sm text-gray-600">
                     <span className="font-medium">Adresse de livraison :</span>{' '}
-                    {order.delivery_address}
+                    {order.shipping_address || order.delivery_address}
                   </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    <span className="font-medium">Téléphone :</span> {order.phone}
-                  </p>
+                  <Link
+                    to={`/consumer/orders/${order.id}`}
+                    className="text-sm bg-gray-100 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-200"
+                  >
+                    Voir le détail
+                  </Link>
                 </div>
               </div>
             ))}

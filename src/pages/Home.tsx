@@ -1,20 +1,22 @@
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Leaf, Users, TrendingUp, Package, Store, MapPin, Phone, Star, Truck, Shield } from 'lucide-react';
+import { ShoppingBag, Leaf, Users, TrendingUp, Package, Store, MapPin, Phone, Star, Truck, Shield, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Home() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const role = user?.role;
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || '';
   return (
-    <div className="min-h-screen">
+    <>
       {/* Hero Section - Personnalisée selon le type d'utilisateur */}
-      <section className="bg-gradient-to-br from-green-50 to-green-100 py-20">
+      <section className="bg-gradient-to-br from-green-50 to-green-100 py-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             {/* Message personnalisé pour les consommateurs connectés */}
-            {user && profile?.role === 'consumer' && (
+            {user && role === 'consumer' && (
               <div className="mb-6">
                 <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-                  Bonjour {profile.full_name || 'cher consommateur'} !
+                  Bonjour {fullName || 'cher consommateur'} !
                   <span className="text-green-600"> Découvrez nos produits frais</span>
                 </h1>
                 <p className="text-xl text-gray-700 mb-8 max-w-3xl mx-auto">
@@ -25,10 +27,10 @@ export default function Home() {
             )}
 
             {/* Message personnalisé pour les producteurs connectés */}
-            {user && profile?.role === 'producer' && (
+            {user && role === 'producer' && (
               <div className="mb-6">
                 <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-                  Bonjour {profile.full_name || 'cher producteur'} !
+                  Bonjour {fullName || 'cher producteur'} !
                   <span className="text-green-600"> Gérez votre exploitation</span>
                 </h1>
                 <p className="text-xl text-gray-700 mb-8 max-w-3xl mx-auto">
@@ -59,8 +61,8 @@ export default function Home() {
                 className="bg-green-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
               >
                 <Package className="h-5 w-5" />
-                {user && profile?.role === 'consumer' ? 'Voir les produits' : 
-                 user && profile?.role === 'producer' ? 'Voir le catalogue' : 'Explorer les produits'}
+                {user && role === 'consumer' ? 'Voir les produits' : 
+                 user && role === 'producer' ? 'Voir le catalogue' : 'Explorer les produits'}
               </Link>
               
               {!user && (
@@ -72,7 +74,7 @@ export default function Home() {
                 </Link>
               )}
 
-              {user && profile?.role === 'producer' && (
+              {user && role === 'producer' && (
                 <Link
                   to="/producer/products"
                   className="bg-white text-green-600 px-8 py-3 rounded-lg text-lg font-semibold border-2 border-green-600 hover:bg-green-50 transition flex items-center justify-center gap-2"
@@ -82,7 +84,7 @@ export default function Home() {
                 </Link>
               )}
 
-              {user && profile?.role === 'consumer' && (
+              {user && role === 'consumer' && (
                 <Link
                   to="/consumer/orders"
                   className="bg-white text-green-600 px-8 py-3 rounded-lg text-lg font-semibold border-2 border-green-600 hover:bg-green-50 transition flex items-center justify-center gap-2"
@@ -96,12 +98,73 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Comment ça marche */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Comment ça marche</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center p-6 bg-gray-50 rounded-xl hover:shadow-lg transition-shadow">
+              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Recherchez</h3>
+              <p className="text-gray-600">Explorez le catalogue et trouvez des produits locaux près de chez vous.</p>
+            </div>
+            <div className="text-center p-6 bg-gray-50 rounded-xl hover:shadow-lg transition-shadow">
+              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShoppingBag className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Commandez</h3>
+              <p className="text-gray-600">Ajoutez au panier et passez votre commande en quelques clics.</p>
+            </div>
+            <div className="text-center p-6 bg-gray-50 rounded-xl hover:shadow-lg transition-shadow">
+              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Truck className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Recevez</h3>
+              <p className="text-gray-600">Retrait à la ferme ou livraison à domicile selon vos préférences.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      {/* Catégories populaires */}
+      <section className="py-16 bg-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Catégories populaires</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+            {[
+              { name: 'Fruits', icon: Leaf },
+              { name: 'Légumes', icon: Package },
+              { name: 'Produits laitiers', icon: Store },
+              { name: 'Viandes', icon: ShoppingBag },
+              { name: 'Céréales', icon: TrendingUp },
+              { name: 'Boissons locales', icon: Users },
+            ].map((cat, idx) => (
+              <Link
+                key={idx}
+                to="/catalog"
+                className="group bg-gray-50 rounded-xl p-4 text-center hover:shadow-lg transition"
+              >
+                <div className="bg-green-100 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
+                  {cat.icon && (
+                    <cat.icon className="h-7 w-7 text-green-600" />
+                  )}
+                </div>
+                <p className="font-semibold text-gray-800 group-hover:text-green-700">{cat.name}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Section avantages - Personnalisée selon le rôle */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
             {!user ? 'Pourquoi choisir AgriConnect ?' :
-             user && profile?.role === 'consumer' ? 'Vos avantages consommateurs' :
+             user && role === 'consumer' ? 'Vos avantages consommateurs' :
              'Vos avantages producteurs'}
           </h2>
           
@@ -110,17 +173,17 @@ export default function Home() {
             <div className="text-center p-6 bg-gray-50 rounded-xl hover:shadow-lg transition-shadow">
               <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 {!user ? <Leaf className="h-8 w-8 text-green-600" /> :
-                 user && profile?.role === 'consumer' ? <Shield className="h-8 w-8 text-green-600" /> :
+                 user && role === 'consumer' ? <Shield className="h-8 w-8 text-green-600" /> :
                  <TrendingUp className="h-8 w-8 text-green-600" />}
               </div>
               <h3 className="text-xl font-semibold mb-3">
                 {!user ? 'Produits frais' :
-                 user && profile?.role === 'consumer' ? 'Qualité garantie' :
+                 user && role === 'consumer' ? 'Qualité garantie' :
                  'Meilleurs revenus'}
               </h3>
               <p className="text-gray-600">
                 {!user ? 'Achetez directement depuis le champ. Des produits frais et de qualité.' :
-                 user && profile?.role === 'consumer' ? 'Tous nos producteurs sont vérifiés. Qualité et fraîcheur garanties ou remboursées.' :
+                 user && role === 'consumer' ? 'Tous nos producteurs sont vérifiés. Qualité et fraîcheur garanties ou remboursées.' :
                  'Vendez au meilleur prix en supprimant les intermédiaires. Gardez 100% de votre marge.'}
               </p>
             </div>
@@ -129,17 +192,17 @@ export default function Home() {
             <div className="text-center p-6 bg-gray-50 rounded-xl hover:shadow-lg transition-shadow">
               <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 {!user ? <Users className="h-8 w-8 text-green-600" /> :
-                 user && profile?.role === 'consumer' ? <MapPin className="h-8 w-8 text-green-600" /> :
+                 user && role === 'consumer' ? <MapPin className="h-8 w-8 text-green-600" /> :
                  <Store className="h-8 w-8 text-green-600" />}
               </div>
               <h3 className="text-xl font-semibold mb-3">
                 {!user ? 'Soutenez les producteurs' :
-                 user && profile?.role === 'consumer' ? 'Produits locaux' :
+                 user && role === 'consumer' ? 'Produits locaux' :
                  'Vitrine en ligne'}
               </h3>
               <p className="text-gray-600">
                 {!user ? 'Achetez directement aux agriculteurs locaux sans intermédiaires.' :
-                 user && profile?.role === 'consumer' ? 'Trouvez des producteurs près de chez vous. Réduisez l\'empreinte carbone.' :
+                 user && role === 'consumer' ? 'Trouvez des producteurs près de chez vous. Réduisez l\'empreinte carbone.' :
                  'Créez votre boutique en ligne en 5 minutes. Gérez vos horaires et disponibilités.'}
               </p>
             </div>
@@ -148,17 +211,17 @@ export default function Home() {
             <div className="text-center p-6 bg-gray-50 rounded-xl hover:shadow-lg transition-shadow">
               <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 {!user ? <ShoppingBag className="h-8 w-8 text-green-600" /> :
-                 user && profile?.role === 'consumer' ? <Truck className="h-8 w-8 text-green-600" /> :
+                 user && role === 'consumer' ? <Truck className="h-8 w-8 text-green-600" /> :
                  <Package className="h-8 w-8 text-green-600" />}
               </div>
               <h3 className="text-xl font-semibold mb-3">
                 {!user ? 'Simple et rapide' :
-                 user && profile?.role === 'consumer' ? 'Livraison facile' :
+                 user && role === 'consumer' ? 'Livraison facile' :
                  'Logistique simplifiée'}
               </h3>
               <p className="text-gray-600">
                 {!user ? 'Commandez en ligne, payez en toute sécurité, recevez chez vous.' :
-                 user && profile?.role === 'consumer' ? 'Retrait à la ferme ou livraison à domicile. Choisissez ce qui vous convient.' :
+                 user && role === 'consumer' ? 'Retrait à la ferme ou livraison à domicile. Choisissez ce qui vous convient.' :
                  'Gérez vos stocks, commandes et livraisons depuis une seule interface.'}
               </p>
             </div>
@@ -167,7 +230,7 @@ export default function Home() {
       </section>
 
       {/* Section producteur - Masquée pour les consommateurs connectés */}
-      {!user || profile?.role !== 'consumer' ? (
+      {!user || role !== 'consumer' ? (
         <section className="py-16 bg-green-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
@@ -217,7 +280,7 @@ export default function Home() {
       ) : null}
 
       {/* Section témoignages */}
-      <section className="py-16 bg-white">
+      {/* <section className="py-16 bg-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
             Ce que nos utilisateurs disent de nous
@@ -284,7 +347,69 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </section> */}
+
+      {/* Top producteurs */}
+      {/* <section className="py-16 bg-green-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Top producteurs</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[1,2,3].map((i) => (
+              <div key={i} className="bg-white rounded-xl shadow-md p-6">
+                <div className="flex items-center mb-4">
+                  <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mr-3">
+                    <Store className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Ferme locale #{i}</p>
+                    <p className="text-sm text-gray-600">Produits variés et frais</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm">Fruits</span>
+                  <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm">Légumes</span>
+                  <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm">Œufs</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section> */}
+
+      {/* Support & contact */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-gray-50 rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between">
+            <div className="flex items-center mb-6 md:mb-0">
+              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mr-4">
+                <Phone className="h-8 w-8 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">Besoin d’aide ?</h3>
+                <p className="text-gray-700">Notre équipe est disponible pour vous accompagner.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Link to="/contact" className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition">Contactez-nous</Link>
+              <Link to="/about" className="bg-white text-green-600 px-6 py-3 rounded-lg font-semibold border-2 border-green-600 hover:bg-green-50 transition">En savoir plus</Link>
+            </div>
+          </div>
+        </div>
       </section>
-    </div>
+
+      {/* Newsletter */}
+      <section className="py-16 bg-green-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-2xl shadow-md p-8 md:p-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Restez informé</h2>
+            <p className="text-gray-700 mb-6">Recevez des offres et des nouvelles des producteurs locaux.</p>
+            <form className="flex flex-col sm:flex-row gap-3">
+              <input type="email" placeholder="Votre email" className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
+              <button type="button" className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition">S’abonner</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

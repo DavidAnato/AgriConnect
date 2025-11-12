@@ -1,37 +1,55 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, User, LogOut, Menu, X, Leaf, Home, Package, Store, Phone, Info, MapPin } from 'lucide-react';
-import { useState } from 'react';
+import { ShoppingCart, User, LogOut, Menu, X } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import './navigation-animations.css';
+import logoSrc from '../../media/AgriConnect logo.png';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, profile, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const { items } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
 
+  const savedUser = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('userData');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const role = (user?.role || savedUser?.role) as 'producer' | 'consumer' | 'admin' | undefined;
+  const displayName = useMemo(() => {
+    const first = user?.first_name ?? savedUser?.first_name;
+    const last = user?.last_name ?? savedUser?.last_name;
+    const email = user?.email ?? savedUser?.email;
+    const full = [first, last].filter(Boolean).join(' ').trim();
+    return full || email || 'Mon compte';
+  }, [user, savedUser]);
+
   const isActive = (path: string) => location.pathname === path;
 
-  const handleSignOut = async () => {
+  const handlelogout = async () => {
     try {
-      await signOut();
+      await logout();
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
 
-  const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const cartItemsCount = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-2">
-            <Leaf className="h-8 w-8 text-green-600" />
-            <span className="text-2xl font-bold text-green-600">AgriConnect</span>
+            <img src={logoSrc} alt="AgriConnect" className="h-20 w-20 object-contain" />
           </Link>
 
           <div className="hidden md:flex items-center space-x-6">
@@ -49,12 +67,12 @@ export default function Navbar() {
             </Link>
             
             {/* Liens spécifiques selon le rôle */}
-            {user && profile?.role === 'producer' && (
+            {user && role === 'producer' && (
               <Link to="/producer/dashboard" className={`flex items-center space-x-1 transition nav-link ${isActive('/producer/dashboard') ? 'text-green-600 font-bold' : 'text-gray-700 hover:text-green-600'}`}>
                 <span>Mon Espace</span>
               </Link>
             )}
-            {user && profile?.role === 'consumer' && (
+            {user && role === 'consumer' && (
               <>
                 <Link to="/consumer/orders" className={`flex items-center space-x-1 transition nav-link ${isActive('/consumer/orders') ? 'text-green-600 font-bold' : 'text-gray-700 hover:text-green-600'}`}>
                   <span>Mes Commandes</span>
@@ -64,7 +82,7 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            {user && profile?.role === 'consumer' && (
+            {user && role === 'consumer' && (
               <Link to="/cart" className="relative text-gray-700 hover:text-green-600 transition">
                 <ShoppingCart className="h-6 w-6" />
                 {cartItemsCount > 0 && (
@@ -78,26 +96,14 @@ export default function Navbar() {
             {user ? (
               <div className="flex items-center space-x-3">
                 <Link
-                  to={
-                    profile?.role === 'producer'
-                      ? '/producer/dashboard'
-                      : profile?.role === 'admin'
-                      ? '/admin/dashboard'
-                      : '/consumer/dashboard'
-                  }
-                  className={`flex items-center space-x-1 transition nav-link ${
-                    isActive('/producer/dashboard') || 
-                    isActive('/admin/dashboard') || 
-                    isActive('/consumer/dashboard') 
-                      ? 'text-green-600 font-bold' 
-                      : 'text-gray-700 hover:text-green-600'
-                  }`}
+                  to={'/profile'}
+                  className={`flex items-center space-x-1 transition nav-link text-gray-700 hover:text-green-600`}
                 > 
                   <User className="h-6 w-6" />
-                  <span className="text-sm">{profile?.full_name || 'Mon compte'}</span>
+                  <span className="text-sm">{displayName}</span>
                 </Link>
                 <button
-                  onClick={handleSignOut}
+                  onClick={handlelogout}
                   className="text-gray-700 hover:text-red-600 transition"
                 >
                   <LogOut className="h-6 w-6" />
@@ -156,9 +162,9 @@ export default function Navbar() {
               <>
                 <Link
                   to={
-                    profile?.role === 'producer'
+                    user?.role === 'producer'
                       ? '/producer/dashboard'
-                      : profile?.role === 'admin'
+                      : user?.role === 'admin'
                       ? '/admin/dashboard'
                       : '/consumer/dashboard'
                   }
@@ -167,7 +173,7 @@ export default function Navbar() {
                 >
                   Mon compte
                 </Link>
-                {profile?.role === 'consumer' && (
+                {role === 'consumer' && (
                   <Link
                     to="/cart"
                     className="block text-gray-700 hover:text-green-600 transition"
@@ -178,7 +184,7 @@ export default function Navbar() {
                 )}
                 <button
                   onClick={() => {
-                    handleSignOut();
+                    handlelogout();
                     setIsMenuOpen(false);
                   }}
                   className="block w-full text-left text-red-600 hover:text-red-700 transition"

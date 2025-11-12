@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Package, User, Calendar, Star, Truck } from 'lucide-react';
+import { Package, Truck, ShoppingCart } from 'lucide-react';
 import { Product } from '../types';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { useCart } from '../contexts/CartContext';
 
 interface ProductCardProps {
   product: Product;
@@ -8,9 +10,11 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   // Calculer la note moyenne si elle existe
-  const averageRating = product.rating || 0;
   const isNew = product.created_at && 
     new Date(product.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const { user } = useAuth();
+  const { addToCart } = useCart();
+  const isConsumer = user?.role === 'consumer';
 
   return (
     <Link
@@ -44,13 +48,6 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span className="text-white font-bold text-lg bg-red-600 px-4 py-2 rounded-lg">Épuisé</span>
           </div>
         )}
-        
-        {/* Badge Promotion */}
-        {product.status === 'on_sale' && (
-          <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-            Promo
-          </div>
-        )}
       </div>
 
       <div className="p-4">
@@ -61,35 +58,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           </span>
         </div>
 
-        {/* Note et producteur */}
-        <div className="flex items-center justify-between mb-2">
-          {averageRating > 0 && (
-            <div className="flex items-center">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`h-4 w-4 ${
-                    i < Math.floor(averageRating)
-                      ? 'text-yellow-400 fill-current'
-                      : 'text-gray-300'
-                  }`}
-                />
-              ))}
-              <span className="text-sm text-gray-600 ml-1">({averageRating})</span>
-            </div>
-          )}
-          
-          <div className="flex items-center text-sm text-gray-600">
-            <User className="h-4 w-4 mr-1" />
-            <span className="truncate">{product.producer_name || 'Producteur local'}</span>
-          </div>
-        </div>
-
-        {/* Localisation */}
-        <div className="flex items-center text-sm text-gray-600 mb-3">
-          <MapPin className="h-4 w-4 mr-1" />
-          <span className="truncate">{product.location}</span>
-        </div>
 
         {/* Description */}
         <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
@@ -112,15 +80,34 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Prix et bouton */}
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-2xl font-bold text-green-600">
+            <span className="text-lg font-bold text-green-600">
               {product.price.toLocaleString()} FCFA
             </span>
             <span className="text-sm text-gray-600">/{product.unit}</span>
           </div>
 
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition">
-            Voir le produit
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition">
+              Voir le produit
+            </button>
+            {isConsumer && product.status !== 'sold_out' && (
+              <button
+                onClick={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await addToCart({ id: Number(product.id) }, 1);
+                    alert('Ajouté au panier');
+                  } catch (err: any) {
+                    alert(err?.message || "Erreur lors de l'ajout au panier");
+                  }
+                }}
+                className="bg-gray-200 text-gray-800 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-gray-300 transition flex items-center gap-1"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Ajouter
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </Link>

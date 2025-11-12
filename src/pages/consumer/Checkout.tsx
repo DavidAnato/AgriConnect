@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
-import { apiService } from '../../services/api';
 
 export default function Checkout() {
-  const { profile } = useAuth();
-  const { items, totalPrice, clearCart } = useCart();
+  const { user } = useAuth();
+  const { items, totalPrice, checkout } = useCart();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     delivery_address: '',
-    phone: profile?.phone || '',
+    phone: user?.phone_number || '',
   });
 
   const [error, setError] = useState('');
@@ -24,24 +23,14 @@ export default function Checkout() {
     setLoading(true);
 
     try {
-      const orderData = {
-        userId: profile?.id || 1,
-        items: items.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          unitPrice: item.product.price,
-          subtotal: item.product.price * item.quantity
-        })),
-        total: items.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-        deliveryAddress: formData.delivery_address,
-        phone: formData.phone,
-        estimatedDeliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString()
-      };
-
-      await apiService.createOrder(orderData);
-
-      clearCart();
-      navigate('/consumer/order-success');
+      // Appeler le checkout du panier (scinde par producteur côté backend)
+      const orders = await checkout(formData.delivery_address);
+      if (!orders || orders.length === 0) {
+        setError('Le panier est vide');
+      } else {
+        // Rediriger vers la liste des commandes avec indicateur de succès
+        navigate('/consumer/orders?success=true');
+      }
     } catch (err) {
       setError('Une erreur est survenue. Veuillez réessayer.');
     } finally {
@@ -127,15 +116,15 @@ export default function Checkout() {
 
               <div className="space-y-4 mb-6">
                 {items.map((item) => (
-                  <div key={item.product.id} className="flex justify-between text-sm">
+                  <div key={item.id} className="flex justify-between text-sm">
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{item.product.name}</p>
+                      <p className="font-medium text-gray-900">{item.product_name}</p>
                       <p className="text-gray-600">
-                        {item.quantity} × {item.product.price.toLocaleString()} FCFA
+                        {String(item.quantity)} × {Number(item.unit_price).toLocaleString()} FCFA
                       </p>
                     </div>
                     <p className="font-semibold text-gray-900">
-                      {(item.product.price * item.quantity).toLocaleString()} FCFA
+                      {Number(item.subtotal).toLocaleString()} FCFA
                     </p>
                   </div>
                 ))}

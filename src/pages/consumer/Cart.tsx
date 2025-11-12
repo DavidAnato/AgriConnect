@@ -66,35 +66,21 @@ export default function Cart() {
 
         <div className="space-y-4 mb-8">
           {items.map((item) => (
-            <div key={item.product.id} className="bg-white rounded-xl shadow-md p-6">
+            <div key={item.id} className="bg-white rounded-xl shadow-md p-6">
               <div className="flex items-center gap-6">
                 <div className="flex-shrink-0 w-24 h-24 bg-gray-200 rounded-lg overflow-hidden">
-                  {item.product.image_url ? (
-                    <img
-                      src={item.product.image_url}
-                      alt={item.product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ShoppingBag className="h-8 w-8 text-gray-400" />
-                    </div>
-                  )}
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ShoppingBag className="h-8 w-8 text-gray-400" />
+                  </div>
                 </div>
 
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {item.product.name}
+                    {item.product_name}
                   </h3>
-                  <p className="text-sm text-gray-600 mb-2">{item.product.location}</p>
                   <p className="text-lg font-bold text-green-600">
-                    {item.product.price.toLocaleString()} FCFA / {item.product.unit}
+                    {Number(item.unit_price).toLocaleString()} FCFA
                   </p>
-                  {item.quantity >= item.product.quantity_available && (
-                    <p className="text-sm text-orange-600 mt-1">
-                      Stock maximum atteint ({item.product.quantity_available} {item.product.unit} disponibles)
-                    </p>
-                  )}
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -102,7 +88,8 @@ export default function Cart() {
                     onClick={() => {
                       try {
                         setError(null);
-                        updateQuantity(item.product.id, item.quantity - 1);
+                        const q = Number(item.quantity);
+                        updateQuantity(Number(item.product), Math.max(q - 1, 0));
                       } catch (err: any) {
                         setError(err.message);
                       }
@@ -112,19 +99,19 @@ export default function Cart() {
                     <Minus className="h-4 w-4" />
                   </button>
                   <span className="text-lg font-semibold w-12 text-center">
-                    {item.quantity}
+                    {String(item.quantity)}
                   </span>
                   <button
                     onClick={() => {
                       try {
                         setError(null);
-                        updateQuantity(item.product.id, item.quantity + 1);
+                        const q = Number(item.quantity);
+                        updateQuantity(Number(item.product), q + 1);
                       } catch (err: any) {
                         setError(err.message);
                       }
                     }}
-                    disabled={item.quantity >= item.product.quantity_available}
-                    className="bg-gray-200 p-2 rounded-lg hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="bg-gray-200 p-2 rounded-lg hover:bg-gray-300 transition"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -132,10 +119,10 @@ export default function Cart() {
 
                 <div className="text-right">
                   <p className="text-xl font-bold text-gray-900 mb-2">
-                    {(item.product.price * item.quantity).toLocaleString()} FCFA
+                    {Number(item.subtotal).toLocaleString()} FCFA
                   </p>
                   <button
-                    onClick={() => removeFromCart(item.product.id)}
+                    onClick={() => removeFromCart(Number(item.product))}
                     className="text-red-600 hover:text-red-700 transition"
                   >
                     <Trash2 className="h-5 w-5" />

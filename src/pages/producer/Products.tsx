@@ -1,24 +1,52 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Package } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { Plus, Edit, Trash2, Package, EyeOff, Eye } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext.tsx';
 import { Product } from '../../types';
 import { apiService } from '../../services/api';
 
 export default function ProducerProducts() {
-  const { profile } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
+  const { user } = useAuth();
+  const [rawProducts, setRawProducts] = useState<any[]>([]);
+  // Supprime l'état products non utilisé; on dérive via rawProducts + mapToProduct
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [publishedFilter, setPublishedFilter] = useState<'all' | 'published' | 'unpublished'>('all');
+
+  const mapToProduct = (p: any): Product => {
+    const price = Number(p.unit_price ?? 0);
+    const unit = p.unit_type ?? 'unité';
+    const location = [p.location_village, p.location_commune].filter(Boolean).join(', ');
+    const description = p.short_description || p.long_description || '';
+    const image_url = p.image || undefined;
+    const status: Product['status'] = Number(p.quantity_available || 0) > 0 ? 'available' : 'sold_out';
+    return {
+      id: Number(p.id),
+      name: p.name,
+      description,
+      category: p.category || 'Autres',
+      price,
+      unit,
+      quantity_available: Number(p.quantity_available || 0),
+      location,
+      image_url,
+      status,
+      created_at: p.created_at || new Date().toISOString(),
+      producer: p.producer_id ? { id: String(p.producer_id), full_name: '', location: location, email: '' } : undefined,
+    };
+  };
 
   useEffect(() => {
     loadProducts();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const loadProducts = async () => {
+    if (!user?.id) return;
+    setLoading(true);
     try {
-      const products = await apiService.getProducts();
-      const producerProducts = products.filter(p => p.producerId === profile?.id);
-      setProducts(producerProducts);
+      const data = await apiService.getProducerProducts(user.id, true);
+      setRawProducts(data || []);
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
@@ -26,38 +54,57 @@ export default function ProducerProducts() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number | string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
       return;
     }
-
     try {
       await apiService.deleteProduct(id);
-      setProducts(prev => prev.filter((p) => p.id !== id));
+      setRawProducts(prev => prev.filter((p) => Number(p.id) !== Number(id)));
     } catch (error) {
       console.error('Error deleting product:', error);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      available: 'bg-green-100 text-green-800',
-      reserved: 'bg-yellow-100 text-yellow-800',
-      sold_out: 'bg-red-100 text-red-800',
-    };
+  const handleTogglePublish = async (id: number | string) => {
+    try {
+      const current = rawProducts.find(p => Number(p.id) === Number(id));
+      const next = !current?.is_published;
+      await apiService.setProductPublished(id, next);
+      const updated = rawProducts.map(p => Number(p.id) === Number(id) ? { ...p, is_published: next } : p);
+      setRawProducts(updated);
+    } catch (error) {
+      console.error('Error toggling publish:', error);
+    }
+  };
 
-    const labels = {
-      available: 'Disponible',
-      reserved: 'Réservé',
-      sold_out: 'Épuisé',
-    };
-
+  const getStatusBadge = (is_published: boolean) => {
+    const styles = is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+    const label = is_published ? 'Publié' : 'Non publié';
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels]}
+      <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles}`}>
+        {label}
       </span>
     );
   };
+
+  const filtered = useMemo(() => {
+    let list = rawProducts.slice();
+    if (publishedFilter !== 'all') {
+      const wantPublished = publishedFilter === 'published';
+      list = list.filter(p => Boolean(p.is_published) === wantPublished);
+    }
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter(p =>
+        String(p.name).toLowerCase().includes(q) ||
+        String(p.short_description || '').toLowerCase().includes(q) ||
+        String(p.location_commune || '').toLowerCase().includes(q) ||
+        String(p.location_village || '').toLowerCase().includes(q)
+      );
+    }
+    return list.map(mapToProduct);
+  }, [rawProducts, searchTerm, publishedFilter]);
 
   if (loading) {
     return (
@@ -73,7 +120,7 @@ export default function ProducerProducts() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Mes produits</h1>
-            <p className="text-gray-600 mt-2">{products.length} produit(s)</p>
+            <p className="text-gray-600 mt-2">{filtered.length} produit(s)</p>
           </div>
           <Link
             to="/producer/products/new"
@@ -84,7 +131,29 @@ export default function ProducerProducts() {
           </Link>
         </div>
 
-        {products.length === 0 ? (
+        {/* Controls */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            <input
+              type="text"
+              placeholder="Rechercher dans vos produits..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            />
+            <select
+              value={publishedFilter}
+              onChange={(e) => setPublishedFilter(e.target.value as any)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            >
+              <option value="all">Tous</option>
+              <option value="published">Publié</option>
+              <option value="unpublished">Non publié</option>
+            </select>
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
           <div className="bg-white rounded-xl shadow-md p-12 text-center">
             <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -116,7 +185,7 @@ export default function ProducerProducts() {
                       Quantité
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Statut
+                      Publication
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -124,7 +193,10 @@ export default function ProducerProducts() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {products.map((product) => (
+                  {filtered.map((product) => {
+                    const raw = rawProducts.find(p => Number(p.id) === Number(product.id));
+                    const is_published = Boolean(raw?.is_published);
+                    return (
                     <tr key={product.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -157,7 +229,7 @@ export default function ProducerProducts() {
                         {product.quantity_available} {product.unit}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(product.status)}
+                        {getStatusBadge(is_published)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-3">
@@ -173,10 +245,17 @@ export default function ProducerProducts() {
                           >
                             <Trash2 className="h-5 w-5" />
                           </button>
+                          <button
+                            onClick={() => handleTogglePublish(product.id)}
+                            className={is_published ? 'text-gray-600 hover:text-gray-900' : 'text-green-600 hover:text-green-900'}
+                            title={is_published ? 'Dépublier' : 'Publier'}
+                          >
+                            {is_published ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );})}
                 </tbody>
               </table>
             </div>

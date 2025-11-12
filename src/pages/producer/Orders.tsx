@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Package, Phone, Mail, MapPin } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { Order } from '../../types';
+import { Package, MapPin } from 'lucide-react';
 import { apiService } from '../../services/api';
 
 export default function ProducerOrders() {
-  const { profile } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
@@ -16,43 +13,24 @@ export default function ProducerOrders() {
 
   const loadOrders = async () => {
     try {
-      const orders = await apiService.getOrders();
-      const products = await apiService.getProducts();
-      const users = await apiService.getUsers();
-
-      const producerProducts = products.filter(p => p.producerId === profile?.id);
-      const producerOrders = orders.filter(order => 
-        order.items.some(item => 
-          producerProducts.some(product => product.id === item.productId)
-        )
-      );
-
-      const enrichedOrders = producerOrders.map(order => ({
-        ...order,
-        consumer: users.find(u => u.id === order.userId)
-      }));
-
-      setOrders(enrichedOrders);
+      const vendorOrders = await apiService.getVendorOrders();
+      // Tri par created_at desc si disponible
+      const sorted = Array.isArray(vendorOrders)
+        ? vendorOrders.sort((a, b) => {
+            const da = new Date(a.created_at ?? a.createdAt ?? 0).getTime();
+            const db = new Date(b.created_at ?? b.createdAt ?? 0).getTime();
+            return db - da;
+          })
+        : [];
+      setOrders(sorted);
     } catch (error) {
-      console.error('Error loading orders:', error);
+      console.error('Erreur lors du chargement des commandes producteur:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
-    try {
-      await apiService.updateOrder(parseInt(orderId), { status: newStatus as Order['status'] });
-
-      setOrders(
-        orders.map((order) =>
-          order.id === orderId ? { ...order, status: newStatus as Order['status'] } : order
-        )
-      );
-    } catch (error) {
-      console.error('Error updating order status:', error);
-    }
-  };
+  // Remarque: pas d'endpoint de mise à jour du statut côté producteur fourni
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -153,87 +131,38 @@ export default function ProducerOrders() {
           <div className="space-y-4">
             {filteredOrders.map((order) => (
               <div key={order.id} className="bg-white rounded-xl shadow-md p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {order.product?.name}
-                      </h3>
-                      {getStatusBadge(order.status)}
-                    </div>
-
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <p>
-                        Quantité : <span className="font-medium">{order.items.reduce((sum, item) => sum + item.quantity, 0)} articles</span>
-                      </p>
-                      <p>
-                        Total : <span className="font-medium text-green-600 text-lg">
-                          {order.total.toLocaleString()} FCFA
-                        </span>
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Commandé le {new Date(order.createdAt).toLocaleDateString('fr-FR')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">Informations client</h4>
-                    <div className="space-y-2 text-sm">
-                      {order.consumer && (
-                        <div className="flex items-center text-gray-600">
-                          <Package className="h-4 w-4 mr-2" />
-                          <span>{order.consumer.full_name}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center text-gray-600">
-                        <Phone className="h-4 w-4 mr-2" />
-                        <a href={`tel:${order.phone}`} className="hover:text-green-600">
-                          {order.phone}
-                        </a>
-                      </div>
-                      {order.consumer?.email && (
-                        <div className="flex items-center text-gray-600">
-                          <Mail className="h-4 w-4 mr-2" />
-                          <a href={`mailto:${order.consumer.email}`} className="hover:text-green-600">
-                            {order.consumer.email}
-                          </a>
-                        </div>
-                      )}
-                      <div className="flex items-start text-gray-600">
-                        <MapPin className="h-4 w-4 mr-2 mt-0.5" />
-                        <span>{order.delivery_address}</span>
-                      </div>
-                    </div>
-
-                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                      <div className="mt-4 flex gap-2">
-                        {order.status === 'pending' && (
-                          <button
-                            onClick={() => handleStatusChange(order.id, 'confirmed')}
-                            className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
-                          >
-                            Confirmer
-                          </button>
-                        )}
-                        {order.status === 'confirmed' && (
-                          <button
-                            onClick={() => handleStatusChange(order.id, 'delivered')}
-                            className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
-                          >
-                            Marquer comme livrée
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleStatusChange(order.id, 'cancelled')}
-                          className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition"
-                        >
-                          Annuler
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900">Commande #{order.id}</h3>
+                  {getStatusBadge(order.status)}
                 </div>
+                <div className="space-y-2 text-sm text-gray-700">
+                  <p>
+                    Articles : <span className="font-medium">{Array.isArray(order.items) ? order.items.length : 0}</span>
+                  </p>
+                  <p>
+                    Total : <span className="font-medium text-green-600 text-lg">{Number(order.total || 0).toLocaleString()} FCFA</span>
+                  </p>
+                  {order.shipping_address && (
+                    <p className="flex items-start"><MapPin className="h-4 w-4 mr-2 mt-0.5" /> <span>{order.shipping_address}</span></p>
+                  )}
+                  {(order.created_at || order.createdAt) && (
+                    <p className="text-xs text-gray-500">Commandé le {new Date(order.created_at ?? order.createdAt).toLocaleDateString('fr-FR')}</p>
+                  )}
+                </div>
+                {Array.isArray(order.items) && order.items.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">Détails des articles</h4>
+                    <ul className="divide-y divide-gray-100">
+                      {order.items.map((it: any) => (
+                        <li key={it.id ?? `${it.product}-${it.product_name}`} className="py-2 flex items-center justify-between text-sm">
+                          <span className="text-gray-700">{it.product_name}</span>
+                          <span className="text-gray-600">x {Number(it.quantity).toLocaleString()}</span>
+                          <span className="text-green-700 font-medium">{Number(it.subtotal || 0).toLocaleString()} FCFA</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ))}
           </div>

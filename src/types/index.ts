@@ -11,6 +11,8 @@ export interface Product {
   status: 'available' | 'reserved' | 'sold_out';
   created_at: string;
   producer?: Producer;
+  rating?: number;
+  delivery_options?: string[];
 }
 
 export interface Producer {
