@@ -126,6 +126,8 @@ export default function Contact() {
                     <h3 className="font-semibold text-gray-900 mb-1">Adresse</h3>
                     <p className="text-gray-600">
                       AgriConnect Bénin<br />
+                      Alegleta<br />
+                      Cotonou, Bénin
                     </p>
                   </div>
                 </div>
@@ -137,7 +139,7 @@ export default function Contact() {
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Téléphone</h3>
                     <p className="text-gray-600">
-                      <a href="tel:+2250707070707" className="hover:text-green-600">
+                      <a href="tel:+2290166605819" className="hover:text-green-600">
                         +229 01 66 60 58 19
                       </a>
                       <br />
@@ -153,8 +155,8 @@ export default function Contact() {
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
                     <p className="text-gray-600">
-                      <a href="mailto:contact@agriconnect.ci" className="hover:text-green-600">
-                        contact@agriconnect.ci
+                      <a href="mailto:bergeleadjakoun@gmail.com" className="hover:text-green-600">
+                        bergeleadjakoun@gmail.com
                       </a>
                       <br />
                       <span className="text-sm">Réponse sous 24h</span>
