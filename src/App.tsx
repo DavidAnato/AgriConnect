@@ -31,6 +31,7 @@ import ConsumerOrders from './pages/consumer/Orders';
 import OrderDetail from './pages/consumer/OrderDetail';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
@@ -150,6 +151,9 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Catch-all route for 404 */}
+            <Route path="*" element={<Layout><NotFound /></Layout>} />
           </Routes>
         </CartProvider>
       </AuthProvider>
