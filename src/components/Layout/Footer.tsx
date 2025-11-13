@@ -14,7 +14,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center space-x-2 mb-4">
                 <Link to="/" className="flex items-center space-x-2">
-                  <img src={logoSrc} alt="AgriConnect" className="h-20 w-20 object-contain" />
+                  <img src={logoSrc} alt="AgriConnect" className="w-24 object-contain" />
                 </Link>
             </div>
             <p className="text-sm">

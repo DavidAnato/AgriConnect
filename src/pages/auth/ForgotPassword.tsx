@@ -41,7 +41,7 @@ export default function ForgotPassword() {
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <img src={logoSrc} alt="AgriConnect" className="h-20 w-20" />
+            <img src={logoSrc} alt="AgriConnect" className="w-24" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Mot de passe oublié</h2>
           <p className="text-gray-600 mt-2">Entrez votre email ou numéro de téléphone</p>
@@ -73,7 +73,7 @@ export default function ForgotPassword() {
               value={emailOrPhone}
               onChange={(e) => setEmailOrPhone(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-              placeholder="votre@email.com ou +225 XX XX XX XX XX"
+              placeholder="votre@email.com ou +229 XX XX XX XX XX"
             />
           </div>
 

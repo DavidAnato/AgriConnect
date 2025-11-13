@@ -49,7 +49,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-2">
-            <img src={logoSrc} alt="AgriConnect" className="h-20 w-20 object-contain" />
+            <img src={logoSrc} alt="AgriConnect" className="w-24 object-contain" />
           </Link>
 
           <div className="hidden md:flex items-center space-x-6">

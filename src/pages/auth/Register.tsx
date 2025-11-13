@@ -112,7 +112,7 @@ export default function Register() {
       });
       setSuccess(true);
       setTimeout(() => {
-        navigate('/verify-email');
+        navigate(`/verify-email?email=${email}`);
       }, 1500);
     } catch (err) {
       setError('Une erreur est survenue. Veuillez réessayer.');
@@ -271,7 +271,7 @@ export default function Register() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                  placeholder="+225 XX XX XX XX XX"
+                  placeholder="+229 XX XX XX XX XX"
                 />
               </div>
 
